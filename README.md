@@ -1,2 +1,3 @@
 # lightpaw
-Lightweight terminal password manager
+...stands for LightPAssWord.
+Lightweight terminal password manager, using Blowfish encryption.
