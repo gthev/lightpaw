@@ -284,17 +284,21 @@ int rm_pwd(char* name, int fd_file) {
     //on tronque le fichier
     ftruncate(fd_file, lseek(fd_file, 0, SEEK_CUR));
 
-    nb_entry--;
-    lseek(fd_file, 8, SEEK_SET);
-    encrypt_write_block(fd_file, (char*)&nb_entry);
-
     //puis, décaler dans la db
     free(entry->name);
     free(entry->mdp);
 
     for(int i=idx_orig+1; i<nb_entry; i++) {
         memcpy(&pwddb[i-1], &pwddb[i], sizeof(struct db_entry));
+        //pwddb[i-1] = pwddb[i];
     }
+
+    nb_entry--;
+
+    pwddb = realloc(pwddb, nb_entry * sizeof(struct db_entry));
+
+    lseek(fd_file, 8, SEEK_SET);
+    encrypt_write_block(fd_file, (char*)&nb_entry);
 
     return 0;
 }
