@@ -356,7 +356,7 @@ void Blowfish_Encrypt(BLOWFISH_CTX *ctx, uint32_t *xl, uint32_t *xr){
   Xr = *xr;
 
   for (i = 0; i < N; ++i) {
-    Xl = Xl ^ ctx->P[i];
+    Xl = Xl ^ ctx->P[(int)i];
     Xr = F(ctx, Xl) ^ Xr;
 
     temp = Xl;
@@ -386,7 +386,7 @@ void Blowfish_Decrypt(BLOWFISH_CTX *ctx, uint32_t *xl, uint32_t *xr){
   Xr = *xr;
 
   for (i = N + 1; i > 1; --i) {
-    Xl = Xl ^ ctx->P[i];
+    Xl = Xl ^ ctx->P[(int)i];
     Xr = F(ctx, Xl) ^ Xr;
 
     /* Exchange Xl and Xr */

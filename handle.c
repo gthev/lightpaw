@@ -4,6 +4,12 @@
 
 char magic[8] = {0x54, 0x12, 0xaf, 0xb3, 0x3c, 0x81, 0xa2, 0x5e};
 
+/* Pour les caractères spéciaux, on utilisera 
+@, $, +, ? et !, et on stocke leur caractères ascii ici*/
+
+#define NR_SPECIALS     5
+const char specials[NR_SPECIALS] = {0x40, 0x24, 0x2b, 0x3f, 0x21};
+
 //au début du fichier : 8 octets pour le mot magique, 8 octets pour le nb d'entrées
 //name doit faire 32 octets (quitte à être rempli de \0 à la fin)
 struct db_entry {
@@ -58,6 +64,7 @@ static int read_decrypt_block(int fd_file, char *buffer) {
 
 void init_pwd(char* pwd) {
     Blowfish_Init(&ctx, (unsigned char*)pwd, strlen(pwd));
+    srand(time(NULL));
 }
 
 int init_file(int fd_file, uint64_t nb_entries) {
@@ -342,6 +349,90 @@ void change_encryption(int fd_file, char *new_pwd) {
         encrypt_write_block(fd_file, &buffer[8*i]);
     } 
 
-    //réencoder tout le fichier
+}
 
+char* gen_pwd(struct gen_pwd_args *args) {
+
+    int sizemdp = args->size_min + (rand() % (args->size_max - args->size_min + 1));
+
+    //printf("min %d max %d size %d\n", args->size_min, args->size_max, sizemdp);
+
+    char *pwd = (char*)calloc(sizemdp + 1, sizeof(char));
+    int constraints = args->constraints;
+
+    int total = 2*IS_NUMBER(constraints) + 2*IS_LOWER(constraints) + 2*IS_UPPER(constraints) + IS_SPECIAL(constraints);
+    int *choix = (int*)calloc(total, sizeof(int));
+
+    int i=0;
+    if(IS_NUMBER(constraints)) {
+        choix[i] = 0;
+        choix[i+1] = 0;
+        i += 2;
+    }
+
+    if(IS_LOWER(constraints)) {
+        choix[i] = 1;
+        choix[i+1] = 1;
+        i += 2;
+    }
+
+    if(IS_UPPER(constraints)) {
+        choix[i] = 2;
+        choix[i+1] = 2;
+        i += 2;
+    }
+
+    if(IS_SPECIAL(constraints)) {
+        choix[i] = 3;
+        i += 1;
+    }
+
+    do {
+
+        for(i=0; i<sizemdp; i++) {
+            switch (choix[rand() % total])
+            {
+            case 0:
+                //NUMBER
+                pwd[i] = '0' + (rand() % 10);
+                break;
+            
+            case 1:
+                //LOWER
+                pwd[i] = 'a' + (rand() % 26);
+                break;
+
+            case 2:
+                //UPPER
+                pwd[i] = 'A' + (rand() % 26);
+                break;
+
+            case 3:
+                //SPECIAL
+                pwd[i] = specials[rand() % NR_SPECIALS];
+                break;
+
+            default:
+                printf("Truc bizarre dans la génération...\n");
+                return NULL;
+                break;
+            }
+        }
+
+    } while(!check_pwd(pwd, args));
+
+    return pwd;
+}
+
+int check_pwd(char* pwd, struct gen_pwd_args *args) {
+    int constraints_read = 0;
+    for(int i=0; pwd[i] != '\0'; i++) {
+        int c = pwd[i];
+        if(c>=0x30 && c<0x3a) constraints_read |= MUST_NUMBER;
+        if(c>=0x41 && c<0x5b) constraints_read |= MUST_UPPER;
+        if(c>=0x61 && c<0x7b) constraints_read |= MUST_LOWER;
+        for(int j=0; j<NR_SPECIALS; j++) { if(c == specials[j]) constraints_read |= MUST_SPECIAL;}
+    }
+
+    return constraints_read == args->constraints;
 }

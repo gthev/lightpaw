@@ -38,6 +38,18 @@ void get_password(char *password)
     tcsetattr(STDIN_FILENO, TCSANOW, &old_terminal);
 }
 
+int check_choice(int choice, int *constraints, int flag) {
+    if(choice == 1) {
+        *constraints |= flag;
+        return 0;
+    } else if(choice == 2) {
+        return 0;
+    } else {
+        printf("Pas compris\n");
+        return 1;
+    }
+}
+
 int main() {
     unsigned int choice, rc;
     char* pwd = (char*)calloc(56,sizeof(char));
@@ -325,7 +337,67 @@ int main() {
             break;
 
         case GEN:
-            printf("Not yet implemented\n");
+            printf("Voulez-vous :\n1. Générer un mot de passe selon les critères par défaut (nombres, lettres minuscules et majuscules et caractères spéciaux, de 8 à 20 caractères)\n2. Spécifier des paramètres\n> ");
+            scanf("%d", &choice);
+
+            char* pwd;
+            struct gen_pwd_args args;
+
+            if(choice == 1) {
+
+                args.size_min = 8;
+                args.size_max = 20;
+                args.constraints = MUST_NUMBER | MUST_LOWER | MUST_UPPER | MUST_SPECIAL;
+
+            } else if(choice == 2) {
+
+                printf("Quelle taille minimum ?\n");
+                scanf("%d", &args.size_min);
+                if(args.size_min > 8192) {
+                    printf("Taille maximum : 8192\n");
+                    break;
+                }
+                printf("Quelle taille maximum ?\n");
+                scanf("%d", &args.size_max);
+                if(args.size_max > 8192) {
+                    printf("Taille maximum : 8192\n");
+                    break;
+                }
+                if(args.size_min > args.size_max) {
+                    printf("Problème : la taille min est plus grande que la taille max\n");
+                    break;
+                }
+
+                args.constraints = 0;
+
+                printf("Nombres ?\n1. Oui\n2. Non\n> ");
+                scanf("%d", &choice);
+                if(check_choice(choice, &args.constraints, MUST_NUMBER));
+
+                printf("Lettres minuscules ?\n1. Oui\n2. Non\n> ");
+                scanf("%d", &choice);
+                if(check_choice(choice, &args.constraints, MUST_LOWER));
+
+                printf("Lettres majuscules ?\n1. Oui\n2. Non\n> ");
+                scanf("%d", &choice);
+                if(check_choice(choice, &args.constraints, MUST_UPPER));
+
+                printf("Caractères spéciaux ?\n1. Oui\n2. Non\n> ");
+                scanf("%d", &choice);
+                if(check_choice(choice, &args.constraints, MUST_SPECIAL));
+
+
+
+            } else {
+                printf("Je ne reconnais pas cette option\n");
+            }
+
+            printf("Génération du mot de passe...\n");
+
+            pwd = gen_pwd(&args);
+
+            printf("Mot de passe généré : %s\n", pwd);
+
             break;
 
         case CHGMDP:
